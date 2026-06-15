@@ -14,8 +14,8 @@ class DatabaseSeeder extends Seeder
 
         // Utilisateur administrateur par défaut (rôle "admin" = is_super_admin).
         $admin = User::firstOrCreate(
-            ['email' => 'gamligocharles@gmail.com'],
-            ['name' => 'Charles Gamligo']
+            ['email' => 'admin@example.com'],
+            ['name' => 'Admin']
         );
 
         $admin->forceFill([
