@@ -50,8 +50,9 @@ module.exports = {
     // Enforce consistent spacing inside braces of object (Already present in TypeScript)
     'object-curly-spacing': ['error', 'always'],
 
-    // Enforce camelCase naming convention
-    'camelcase': 'error',
+    // Enforce camelCase naming convention (object/API properties excluded:
+    // the backend uses snake_case field and query param names)
+    'camelcase': ['error', { properties: 'never' }],
 
     // Disable max-len
     'max-len': 'off',

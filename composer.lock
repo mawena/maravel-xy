@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "37a63b550026dd8b833d2d12fb7944ef",
+    "content-hash": "2e1edd7f1a82f1384de6933f3d8aa85e",
     "packages": [
         {
             "name": "brick/math",
@@ -2073,25 +2073,25 @@
         },
         {
             "name": "mawena/maravel",
-            "version": "2.7.0",
+            "version": "4.0.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/mawena/maravel.git",
-                "reference": "5f095a8fdd9677a4b764dfcdf1115609b0ebccd9"
+                "reference": "2e7cf25d2d2ff702793a18bab295bf9a3235f076"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/mawena/maravel/zipball/5f095a8fdd9677a4b764dfcdf1115609b0ebccd9",
-                "reference": "5f095a8fdd9677a4b764dfcdf1115609b0ebccd9",
+                "url": "https://api.github.com/repos/mawena/maravel/zipball/2e7cf25d2d2ff702793a18bab295bf9a3235f076",
+                "reference": "2e7cf25d2d2ff702793a18bab295bf9a3235f076",
                 "shasum": ""
             },
             "require": {
-                "laravel/framework": "^10.0|^11.0|^12.0",
+                "laravel/framework": "^10.0|^11.0|^12.0|^13.0",
                 "php": "^8.1|^8.2|^8.3|^8.4"
             },
             "require-dev": {
-                "orchestra/testbench": "^8.0",
-                "phpunit/phpunit": "^10.0"
+                "orchestra/testbench": "^8.0|^9.0|^10.0|^11.0",
+                "phpunit/phpunit": "^10.0|^11.0"
             },
             "type": "library",
             "extra": {
@@ -2116,7 +2116,7 @@
                     "email": "gamligocharles@gmail.com"
                 }
             ],
-            "description": "Librairie Laravel avancée pour APIController avec système de permissions, modèles enrichis et policies automatiques",
+            "description": "Librairie Laravel avancée pour APIController avec système de rôles & permissions dynamiques (RBAC en base), modèles enrichis et policies automatiques",
             "homepage": "https://github.com/mawena/maravel",
             "keywords": [
                 "advanced",
@@ -2133,7 +2133,7 @@
                 "issues": "https://github.com/mawena/maravel/issues",
                 "source": "https://github.com/mawena/maravel"
             },
-            "time": "2025-12-15T13:15:23+00:00"
+            "time": "2026-06-14T10:15:03+00:00"
         },
         {
             "name": "monolog/monolog",

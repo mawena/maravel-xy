@@ -1,22 +1,29 @@
 <?php
 
-use App\Http\Controllers\AuthController;
-use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\API\AuthController;
+use App\Http\Controllers\API\PermissionController;
+use App\Http\Controllers\API\RoleController;
+use App\Http\Controllers\API\UserController;
 use Illuminate\Support\Facades\Route;
 
-// Public
-Route::post('/auth/login', [AuthController::class, 'login']);
-Route::post('/auth/register', [AuthController::class, 'register']);
+Route::controller(AuthController::class)->group(function () {
+    Route::post('auth/login', 'login')->name('auth.login');
 
-// Authenticated
-Route::middleware('auth:sanctum')->group(function () {
-    Route::post('/auth/logout', [AuthController::class, 'logout']);
-    Route::get('/auth/me', [AuthController::class, 'me']);
-    Route::post('/auth/change-password', [AuthController::class, 'changePassword']);
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::prefix('auth')->name('auth.')->group(function () {
+            Route::get('data', 'data')->name('data');
+            Route::delete('logout', 'logout')->name('logout');
+        });
 
-    // Admin routes
-    Route::prefix('admin')->middleware('can:manage,all')->group(function () {
-        Route::get('/users/stats', [UserController::class, 'stats']);
-        Route::apiResource('users', UserController::class);
+        // Toujours accessible, même si password_change_required = true
+        Route::put('users/update-password', [UserController::class, 'updatePassword'])
+            ->name('user.update-password');
+
+        // Routes protégées par le middleware de statut de compte
+        Route::middleware('account.status')->group(function () {
+            Route::apiResource('users', UserController::class);
+            Route::apiResource('roles', RoleController::class);
+            Route::apiResource('permissions', PermissionController::class);
+        });
     });
 });

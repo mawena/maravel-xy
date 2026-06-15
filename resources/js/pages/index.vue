@@ -31,7 +31,7 @@
               <h3 class="text-lg font-semibold text-gray-900 mb-2">1. Authentification</h3>
               <p class="text-gray-700 text-sm mb-3">Le système d'authentification utilise Laravel Sanctum.</p>
               <ul class="text-sm text-gray-600 space-y-1">
-                <li>✓ Pages de login/register disponibles</li>
+                <li>✓ Page de login disponible</li>
                 <li>✓ API endpoints configurés</li>
                 <li>✓ Token-based authentication</li>
               </ul>
@@ -165,9 +165,6 @@
         <router-link to="/login" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
           Se Connecter
         </router-link>
-        <router-link to="/register" class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
-          S'Inscrire
-        </router-link>
       </div>
     </div>
   </div>
@@ -175,6 +172,12 @@
 
 <script setup>
 import { defineComponent } from 'vue'
+
+definePage({
+  meta: {
+    public: true,
+  },
+})
 
 defineComponent({
   name: 'HomePage'

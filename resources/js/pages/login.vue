@@ -54,12 +54,12 @@ const login = async () => {
       },
     })
 
-    const { accessToken, userData, userAbilityRules } = res
+    const { userToken, user } = res.data
 
-    useCookie('userAbilityRules').value = userAbilityRules
-    ability.update(userAbilityRules)
-    useCookie('userData').value = userData
-    useCookie('accessToken').value = accessToken
+    useCookie('userAbilityRules').value = user.ability_rules
+    ability.update(user.ability_rules)
+    useCookie('userData').value = user
+    useCookie('accessToken').value = userToken
 
     // Redirect to `to` query if exist or redirect to index route
 
@@ -143,11 +143,8 @@ const onSubmit = () => {
             color="primary"
             variant="tonal"
           >
-            <p class="text-sm mb-2">
-              Admin: <strong>admin@flixger.tg</strong> / Pass: <strong>password</strong>
-            </p>
             <p class="text-sm mb-0">
-              Client: <strong>client@flixger.tg</strong> / Pass: <strong>password</strong>
+              Admin: <strong>gamligocharles@gmail.com</strong> / Pass: <strong>password</strong>
             </p>
           </VAlert>
         </VCardText>
@@ -189,12 +186,6 @@ const onSubmit = () => {
                     v-model="rememberMe"
                     label="Remember me"
                   />
-                  <RouterLink
-                    class="text-primary ms-2 mb-1"
-                    :to="{ name: 'forgot-password' }"
-                  >
-                    Forgot Password?
-                  </RouterLink>
                 </div>
 
                 <VBtn
@@ -205,19 +196,6 @@ const onSubmit = () => {
                 </VBtn>
               </VCol>
 
-              <!-- create account -->
-              <VCol
-                cols="12"
-                class="text-center"
-              >
-                <span>New on our platform?</span>
-                <RouterLink
-                  class="text-primary ms-1"
-                  :to="{ name: 'register' }"
-                >
-                  Create an account
-                </RouterLink>
-              </VCol>
               <VCol
                 cols="12"
                 class="d-flex align-center"

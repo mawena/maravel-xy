@@ -21,7 +21,10 @@ declare module 'vue-router/auto-routes' {
     'root': RouteRecordInfo<'root', '/', Record<never, never>, Record<never, never>>,
     '$error': RouteRecordInfo<'$error', '/:error(.*)', { error: ParamValue<true> }, { error: ParamValue<false> }>,
     'account-security': RouteRecordInfo<'account-security', '/account/security', Record<never, never>, Record<never, never>>,
+    'admin-permissions': RouteRecordInfo<'admin-permissions', '/admin/permissions', Record<never, never>, Record<never, never>>,
+    'admin-roles': RouteRecordInfo<'admin-roles', '/admin/roles', Record<never, never>, Record<never, never>>,
+    'admin-users': RouteRecordInfo<'admin-users', '/admin/users', Record<never, never>, Record<never, never>>,
     'login': RouteRecordInfo<'login', '/login', Record<never, never>, Record<never, never>>,
-    'register': RouteRecordInfo<'register', '/register', Record<never, never>, Record<never, never>>,
+    'not-authorized': RouteRecordInfo<'not-authorized', '/not-authorized', Record<never, never>, Record<never, never>>,
   }
 }

@@ -10,18 +10,20 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        User::firstOrCreate(['email' => 'admin@example.com'], [
-            'name'     => 'Administrateur',
-            'phone'    => '1234567890',
-            'password' => Hash::make('password'),
-            'role'     => 'admin',
-        ]);
+        $this->call(RolePermissionSeeder::class);
 
-        User::firstOrCreate(['email' => 'user@example.com'], [
-            'name'     => 'Utilisateur Test',
-            'phone'    => '0987654321',
+        // Utilisateur administrateur par défaut (rôle "admin" = is_super_admin).
+        $admin = User::firstOrCreate(
+            ['email' => 'gamligocharles@gmail.com'],
+            ['name' => 'Charles Gamligo']
+        );
+
+        $admin->forceFill([
             'password' => Hash::make('password'),
-            'role'     => 'user',
-        ]);
+            'activated' => true,
+            'password_change_required' => false,
+        ])->save();
+
+        $admin->assignRole('admin');
     }
 }
