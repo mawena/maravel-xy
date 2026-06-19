@@ -1,6 +1,6 @@
 # Maravel XY
 
-[![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](https://github.com/mawena/maravel-xy/releases)
+[![Version](https://img.shields.io/badge/version-1.1.1-blue.svg)](https://github.com/mawena/maravel-xy/releases)
 ![PHP](https://img.shields.io/badge/php-%5E8.2-777BB4.svg)
 ![Laravel](https://img.shields.io/badge/laravel-%5E12.0-FF2D20.svg)
 ![Vue](https://img.shields.io/badge/vue-3.x-4FC08D.svg)
