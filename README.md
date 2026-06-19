@@ -1,6 +1,27 @@
-# Application Template
+# Maravel XY
+
+[![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](https://github.com/mawena/maravel-xy/releases)
+![PHP](https://img.shields.io/badge/php-%5E8.2-777BB4.svg)
+![Laravel](https://img.shields.io/badge/laravel-%5E12.0-FF2D20.svg)
+![Vue](https://img.shields.io/badge/vue-3.x-4FC08D.svg)
+![License](https://img.shields.io/badge/license-MIT-green.svg)
 
 Un template minimaliste conçu pour faciliter le démarrage rapide de nouvelles applications web avec une gestion utilisateurs complète et une authentification sécurisée.
+
+## Table des matières
+
+- [Caractéristiques](#caractéristiques)
+- [Structure du Projet](#structure-du-projet)
+- [Installation](#installation)
+- [Développement](#développement)
+- [Ajouter une nouvelle fonctionnalité](#ajouter-une-nouvelle-fonctionnalité)
+- [Build pour la production](#build-pour-la-production)
+- [Tests](#tests)
+- [Publier une nouvelle version](#publier-une-nouvelle-version)
+- [Ressources](#ressources)
+- [Support](#support)
+- [Changelog](#changelog)
+- [License](#license)
 
 ## Caractéristiques
 
@@ -8,6 +29,9 @@ Un template minimaliste conçu pour faciliter le démarrage rapide de nouvelles 
 - ✅ **Gestion des utilisateurs** complète (CRUD)
 - ✅ **Système de rôles et permissions** avec CASL
 - ✅ **Frontend moderne** avec Vue 3 + Vuetify
+- ✅ **Tableaux** avec recherche/tri/pagination 100% frontend (`VDataTableServer` + `useClientTable`), bouton
+  de rechargement manuel et animation de suppression de ligne
+- ✅ **Formulaires d'ajout/édition** générés dynamiquement à partir d'une liste de champs (`FieldRenderer`)
 - ✅ **Backend robuste** avec Laravel
 - ✅ **Base de données** avec migrations
 - ✅ **API RESTful** prête à l'emploi
@@ -132,6 +156,26 @@ onMounted(async () => {
 
 Le routing est automatique basé sur le chemin du fichier!
 
+### 3. Liste avec filtres + formulaire dynamique
+
+Les pages `admin/users`, `admin/roles` et `admin/permissions` montrent le pattern à reproduire pour une
+nouvelle ressource :
+
+- **Liste** : un seul appel API avec `paginate: false` au montage, puis un `computed` qui applique la
+  recherche/les filtres, et le composable `useClientTable(filteredItems)` pour le tri/la pagination
+  (alimente `VDataTableServer` via `page`, `itemsPerPage`, `updateOptions`, `paginatedItems`,
+  `totalItems` — aucun appel réseau supplémentaire).
+- **Formulaire** : une liste de champs (`value_key`, `type`, `label`, `required`, `cols`, `data`, `show`)
+  rendue avec `<FieldRenderer v-model="form[field.value_key]" :field="field" />` dans une boucle
+  `v-for` sur `VCol`, plutôt que des champs Vuetify codés en dur. Types supportés : `text`, `number`,
+  `email`, `password`, `textarea`, `tiptap`, `date`, `lov` (liste de valeurs/autocomplete), `select`,
+  `boolean`, `checkbox`, `file`.
+- **Rechargement + animation de suppression** : un bouton "Recharger" (`:loading="loading"` +
+  `@click="fetchX"`) relance le chargement de la liste. À la suppression, l'id de la ligne est ajouté à un
+  `Set` réactif `deletingIds`, exposé au tableau via `:row-props` (classe CSS `row-removing` définie dans
+  le `<style scoped>` du composant) ; le rechargement de la liste est différé de la durée de l'animation
+  (`ROW_REMOVE_ANIMATION_DURATION`) pour laisser la ligne disparaître en fondu avant de retirer la donnée.
+
 ## Build pour la production
 
 ```bash
@@ -151,6 +195,15 @@ php artisan test
 pnpm test
 ```
 
+## Publier une nouvelle version
+
+1. Mettre à jour [CHANGELOG.md](CHANGELOG.md) avec une entrée `## [x.y.z] - AAAA-MM-JJ`.
+2. Lancer le script de publication, qui commit/push les changements puis crée et push le tag `vx.y.z` :
+
+```bash
+./pusher.sh 1.2.0 "Description du changement"
+```
+
 ## Ressources
 
 - [Documentation Laravel](https://laravel.com/docs)
@@ -161,6 +214,10 @@ pnpm test
 ## Support
 
 Pour des questions ou des problèmes, consultez la page d'accueil de l'application qui contient un guide complet d'implémentation.
+
+## Changelog
+
+Voir [CHANGELOG.md](CHANGELOG.md) pour l'historique des versions.
 
 ## License
 

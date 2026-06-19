@@ -16,26 +16,57 @@ const headers = [
   { title: 'Actions', key: 'actions', sortable: false, align: 'end' },
 ]
 
-const permissions = ref([])
-const totalPermissions = ref(0)
+const itemsPerPageOptions = [
+  { value: 10, title: '10' },
+  { value: 25, title: '25' },
+  { value: 50, title: '50' },
+  { value: -1, title: 'Tout' },
+]
+
 const loading = ref(false)
-const page = ref(1)
-const itemsPerPage = ref(10)
+const allPermissions = ref([])
+
+// ----- Filtres (frontend) -----
 const search = ref('')
+const selectedAction = ref(null)
+const selectedSubject = ref(null)
+
+// Options déduites des données chargées (pas d'appel réseau dédié)
+const actionOptions = computed(() => [...new Set(allPermissions.value.map(permission => permission.action))]
+  .sort()
+  .map(action => ({ title: action, value: action })))
+
+const subjectOptions = computed(() => [...new Set(allPermissions.value.map(permission => permission.subject))]
+  .sort()
+  .map(subject => ({ title: subject, value: subject })))
+
+const filteredPermissions = computed(() => allPermissions.value.filter(permission => {
+  const matchesSearchQuery = matchesSearch(permission, ['action', 'subject', 'label', 'description'], search.value)
+  const matchesAction = !selectedAction.value || permission.action === selectedAction.value
+  const matchesSubject = !selectedSubject.value || permission.subject === selectedSubject.value
+
+  return matchesSearchQuery && matchesAction && matchesSubject
+}))
+
+// ----- Tri & pagination (frontend) -----
+const {
+  page,
+  itemsPerPage,
+  updateOptions,
+  paginatedItems: permissions,
+  totalItems: totalPermissions,
+} = useClientTable(filteredPermissions)
 
 const fetchPermissions = async () => {
   loading.value = true
   try {
     const res = await $api('/permissions', {
       query: {
-        per_page: itemsPerPage.value,
-        page: page.value,
-        search: search.value || undefined,
+        paginate: false,
       },
     })
 
-    permissions.value = res.data
-    totalPermissions.value = res.total
+    allPermissions.value = res.data
   }
   catch (err) {
     showSnackbar(err?.data?.errors?.auth || 'Erreur lors du chargement des permissions', 'error')
@@ -45,8 +76,7 @@ const fetchPermissions = async () => {
   }
 }
 
-watch(search, () => {
-  page.value = 1
+onMounted(() => {
   fetchPermissions()
 })
 
@@ -99,6 +129,41 @@ const fieldErrors = field => {
   return value ? String(value).split('<br>') : []
 }
 
+// ----- Champs du formulaire (pilotés par FieldRenderer) -----
+const permissionFormFields = computed(() => [
+  {
+    value_key: 'action',
+    type: 'text',
+    label: 'Action',
+    placeholder: 'ex: create, read, update, delete',
+    required: true,
+    cols: { cols: 12, md: 6 },
+  },
+  {
+    value_key: 'subject',
+    type: 'text',
+    label: 'Sujet',
+    placeholder: 'ex: user, role, permission',
+    required: true,
+    cols: { cols: 12, md: 6 },
+  },
+  {
+    value_key: 'label',
+    type: 'text',
+    label: 'Libellé',
+    cols: { cols: 12, md: 6 },
+  },
+  {
+    value_key: 'description',
+    type: 'text',
+    label: 'Description',
+    cols: { cols: 12, md: 6 },
+  },
+])
+
+const activePermissionFormFields = computed(() => permissionFormFields.value
+  .map(field => ({ ...field, errors: fieldErrors(field.value_key) })))
+
 const submitForm = async () => {
   saving.value = true
   errors.value = {}
@@ -149,6 +214,11 @@ const isDeleteDialogVisible = ref(false)
 const permissionToDelete = ref(null)
 const deleting = ref(false)
 
+// Ids des lignes en cours de suppression, pour jouer l'animation de disparition avant de recharger la liste
+const deletingIds = reactive(new Set())
+const rowProps = ({ item }) => ({ class: deletingIds.has(item.id) ? 'row-removing' : undefined })
+const ROW_REMOVE_ANIMATION_DURATION = 300
+
 const confirmDelete = permission => {
   permissionToDelete.value = permission
   isDeleteDialogVisible.value = true
@@ -158,12 +228,18 @@ const deletePermission = async () => {
   if (!permissionToDelete.value)
     return
 
+  const id = permissionToDelete.value.id
+
   deleting.value = true
   try {
-    await $api(`/permissions/${permissionToDelete.value.id}`, { method: 'DELETE' })
+    await $api(`/permissions/${id}`, { method: 'DELETE' })
     showSnackbar('Permission supprimée avec succès')
     isDeleteDialogVisible.value = false
+
+    deletingIds.add(id)
+    await new Promise(resolve => setTimeout(resolve, ROW_REMOVE_ANIMATION_DURATION))
     await fetchPermissions()
+    deletingIds.delete(id)
   }
   catch (err) {
     showSnackbar(err?.data?.errors?.auth || err?.data?.errors?.id || 'Une erreur est survenue', 'error')
@@ -187,13 +263,22 @@ const deletePermission = async () => {
           </p>
         </div>
 
-        <div class="d-flex gap-4 align-center">
-          <AppTextField
-            v-model="search"
-            placeholder="Rechercher..."
-            prepend-inner-icon="tabler-search"
-            style="min-width: 220px;"
-          />
+        <div class="d-flex flex-wrap gap-2">
+          <VBtn
+            variant="tonal"
+            color="secondary"
+            prepend-icon="tabler-refresh"
+            :loading="loading"
+            :disabled="loading"
+            @click="fetchPermissions"
+          >
+            Recharger
+            <template #loader>
+              <span class="custom-loader">
+                <VIcon icon="tabler-refresh" />
+              </span>
+            </template>
+          </VBtn>
 
           <VBtn
             v-if="ability.can('create', 'permission')"
@@ -207,14 +292,46 @@ const deletePermission = async () => {
 
       <VDivider />
 
+      <VCardText class="d-flex flex-wrap gap-4 align-center">
+        <AppTextField
+          v-model="search"
+          placeholder="Rechercher une permission..."
+          prepend-inner-icon="tabler-search"
+          style="min-width: 220px;"
+        />
+
+        <AppSelect
+          v-model="selectedAction"
+          placeholder="Filtrer par action"
+          :items="actionOptions"
+          clearable
+          clear-icon="tabler-x"
+          style="min-width: 180px;"
+        />
+
+        <AppSelect
+          v-model="selectedSubject"
+          placeholder="Filtrer par sujet"
+          :items="subjectOptions"
+          clearable
+          clear-icon="tabler-x"
+          style="min-width: 180px;"
+        />
+      </VCardText>
+
+      <VDivider />
+
       <VDataTableServer
         v-model:page="page"
         v-model:items-per-page="itemsPerPage"
+        :items-per-page-options="itemsPerPageOptions"
         :headers="headers"
         :items="permissions"
         :items-length="totalPermissions"
         :loading="loading"
-        @update:options="fetchPermissions"
+        :row-props="rowProps"
+        class="text-no-wrap"
+        @update:options="updateOptions"
       >
         <template #item.action="{ item }">
           <VChip
@@ -269,6 +386,14 @@ const deletePermission = async () => {
             </VBtn>
           </div>
         </template>
+
+        <template #bottom>
+          <TablePagination
+            v-model:page="page"
+            :items-per-page="itemsPerPage"
+            :total-items="totalPermissions"
+          />
+        </template>
       </VDataTableServer>
     </VCard>
 
@@ -287,45 +412,13 @@ const deletePermission = async () => {
         <VCardText class="pa-5">
           <VRow>
             <VCol
-              cols="12"
-              md="6"
+              v-for="field in activePermissionFormFields"
+              :key="field.value_key"
+              v-bind="field.cols"
             >
-              <AppTextField
-                v-model="form.action"
-                label="Action"
-                placeholder="ex: create, read, update, delete"
-                :error-messages="fieldErrors('action')"
-              />
-            </VCol>
-            <VCol
-              cols="12"
-              md="6"
-            >
-              <AppTextField
-                v-model="form.subject"
-                label="Sujet"
-                placeholder="ex: user, role, permission"
-                :error-messages="fieldErrors('subject')"
-              />
-            </VCol>
-            <VCol
-              cols="12"
-              md="6"
-            >
-              <AppTextField
-                v-model="form.label"
-                label="Libellé"
-                :error-messages="fieldErrors('label')"
-              />
-            </VCol>
-            <VCol
-              cols="12"
-              md="6"
-            >
-              <AppTextField
-                v-model="form.description"
-                label="Description"
-                :error-messages="fieldErrors('description')"
+              <FieldRenderer
+                v-model="form[field.value_key]"
+                :field="field"
               />
             </VCol>
           </VRow>
@@ -396,3 +489,28 @@ const deletePermission = async () => {
     </VSnackbar>
   </div>
 </template>
+
+<style lang="scss" scoped>
+.custom-loader {
+  display: flex;
+  animation: loader 1s infinite;
+}
+
+@keyframes loader {
+  from {
+    transform: rotate(0);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+// Animation de disparition d'une ligne du tableau lors de sa suppression
+:deep(.row-removing) {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  transform: scale(0.97);
+}
+</style>

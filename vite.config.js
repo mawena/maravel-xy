@@ -1,14 +1,13 @@
-import laravel from 'laravel-vite-plugin'
-import { fileURLToPath } from 'node:url'
 import VueI18nPlugin from '@intlify/unplugin-vue-i18n/vite'
 import vue from '@vitejs/plugin-vue'
 import vueJsx from '@vitejs/plugin-vue-jsx'
+import laravel from 'laravel-vite-plugin'
+import { fileURLToPath } from 'node:url'
 import AutoImport from 'unplugin-auto-import/vite'
 import Components from 'unplugin-vue-components/vite'
 import { VueRouterAutoImports, getPascalCaseRouteName } from 'unplugin-vue-router'
 import VueRouter from 'unplugin-vue-router/vite'
 import { defineConfig } from 'vite'
-import VueDevTools from 'vite-plugin-vue-devtools'
 import MetaLayouts from 'vite-plugin-vue-meta-layouts'
 import vuetify from 'vite-plugin-vuetify'
 import svgLoader from 'vite-svg-loader'
@@ -109,9 +108,9 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     cors: true,
-    origin: 'http://flixger.mawena.com:5173',
+    origin: 'http://localhost:5173',
     hmr: {
-      host: 'flixger.mawena.com',
+      host: 'localhost',
       port: 5173,
       protocol: 'ws',
     },

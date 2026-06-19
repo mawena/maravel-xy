@@ -12,19 +12,48 @@ const userData = useCookie('userData')
 const headers = [
   { title: 'Utilisateur', key: 'name' },
   { title: 'Rôles', key: 'roles', sortable: false },
-  { title: 'Statut', key: 'activated', sortable: false },
+  { title: 'Statut', key: 'activated' },
   { title: 'Mot de passe', key: 'password_change_required', sortable: false },
   { title: 'Actions', key: 'actions', sortable: false, align: 'end' },
 ]
 
-const users = ref([])
-const totalUsers = ref(0)
-const loading = ref(false)
-const page = ref(1)
-const itemsPerPage = ref(10)
-const search = ref('')
+const itemsPerPageOptions = [
+  { value: 10, title: '10' },
+  { value: 25, title: '25' },
+  { value: 50, title: '50' },
+  { value: -1, title: 'Tout' },
+]
 
+const statusOptions = [
+  { title: 'Actif', value: 1 },
+  { title: 'Inactif', value: 0 },
+]
+
+const loading = ref(false)
+const allUsers = ref([])
 const roleOptions = ref([])
+
+// ----- Filtres (frontend) -----
+const search = ref('')
+const selectedRole = ref(null)
+const selectedStatus = ref(null)
+
+const filteredUsers = computed(() => allUsers.value.filter(user => {
+  const matchesSearchQuery = matchesSearch(user, ['name', 'email'], search.value)
+  const matchesRole = !selectedRole.value || user.roles?.some(role => role.id === selectedRole.value)
+  const matchesStatus = selectedStatus.value === null || !!user.activated === !!selectedStatus.value
+
+  return matchesSearchQuery && matchesRole && matchesStatus
+}))
+
+// ----- Tri & pagination (frontend) -----
+const {
+  page,
+  itemsPerPage,
+  updateOptions,
+  paginatedItems: users,
+  totalItems: totalUsers,
+} = useClientTable(filteredUsers)
 
 const fetchUsers = async () => {
   loading.value = true
@@ -32,14 +61,11 @@ const fetchUsers = async () => {
     const res = await $api('/users', {
       query: {
         with_roles: true,
-        per_page: itemsPerPage.value,
-        page: page.value,
-        search: search.value || undefined,
+        paginate: false,
       },
     })
 
-    users.value = res.data
-    totalUsers.value = res.total
+    allUsers.value = res.data
   }
   catch (err) {
     showSnackbar(err?.data?.errors?.auth || 'Erreur lors du chargement des utilisateurs', 'error')
@@ -63,12 +89,8 @@ const fetchRoles = async () => {
   }
 }
 
-watch(search, () => {
-  page.value = 1
-  fetchUsers()
-})
-
 onMounted(() => {
+  fetchUsers()
   fetchRoles()
 })
 
@@ -125,6 +147,54 @@ const fieldErrors = field => {
   return value ? String(value).split('<br>') : []
 }
 
+// ----- Champs du formulaire (pilotés par FieldRenderer) -----
+const userFormFields = computed(() => [
+  {
+    value_key: 'name',
+    type: 'text',
+    label: 'Nom',
+    required: true,
+    cols: { cols: 12, md: 6 },
+  },
+  {
+    value_key: 'email',
+    type: 'email',
+    label: 'Email',
+    required: true,
+    cols: { cols: 12, md: 6 },
+  },
+  {
+    value_key: 'password',
+    type: 'password',
+    label: 'Mot de passe',
+    required: !isEditing.value,
+    placeholder: isEditing.value ? 'Laisser vide pour ne pas changer' : '',
+    cols: { cols: 12, md: 6 },
+  },
+  {
+    value_key: 'roles',
+    type: 'lov',
+    label: 'Rôles',
+    data: { list: { items: roleOptions.value, multiple: true, chips: true } },
+    cols: { cols: 12, md: 6 },
+  },
+  {
+    value_key: 'activated',
+    type: 'boolean',
+    label: 'Compte activé',
+    cols: { cols: 12, md: 6 },
+  },
+  {
+    value_key: 'password_change_required',
+    type: 'boolean',
+    label: 'Changement de mot de passe requis',
+    cols: { cols: 12, md: 6 },
+  },
+])
+
+const activeUserFormFields = computed(() => userFormFields.value
+  .map(field => ({ ...field, errors: fieldErrors(field.value_key) })))
+
 const submitForm = async () => {
   saving.value = true
   errors.value = {}
@@ -179,6 +249,11 @@ const isDeleteDialogVisible = ref(false)
 const userToDelete = ref(null)
 const deleting = ref(false)
 
+// Ids des lignes en cours de suppression, pour jouer l'animation de disparition avant de recharger la liste
+const deletingIds = reactive(new Set())
+const rowProps = ({ item }) => ({ class: deletingIds.has(item.id) ? 'row-removing' : undefined })
+const ROW_REMOVE_ANIMATION_DURATION = 300
+
 const confirmDelete = user => {
   userToDelete.value = user
   isDeleteDialogVisible.value = true
@@ -188,12 +263,18 @@ const deleteUser = async () => {
   if (!userToDelete.value)
     return
 
+  const id = userToDelete.value.id
+
   deleting.value = true
   try {
-    await $api(`/users/${userToDelete.value.id}`, { method: 'DELETE' })
+    await $api(`/users/${id}`, { method: 'DELETE' })
     showSnackbar('Utilisateur supprimé avec succès')
     isDeleteDialogVisible.value = false
+
+    deletingIds.add(id)
+    await new Promise(resolve => setTimeout(resolve, ROW_REMOVE_ANIMATION_DURATION))
     await fetchUsers()
+    deletingIds.delete(id)
   }
   catch (err) {
     showSnackbar(err?.data?.errors?.auth || err?.data?.errors?.id || 'Une erreur est survenue', 'error')
@@ -217,13 +298,22 @@ const deleteUser = async () => {
           </p>
         </div>
 
-        <div class="d-flex gap-4 align-center">
-          <AppTextField
-            v-model="search"
-            placeholder="Rechercher..."
-            prepend-inner-icon="tabler-search"
-            style="min-width: 220px;"
-          />
+        <div class="d-flex flex-wrap gap-2">
+          <VBtn
+            variant="tonal"
+            color="secondary"
+            prepend-icon="tabler-refresh"
+            :loading="loading"
+            :disabled="loading"
+            @click="fetchUsers"
+          >
+            Recharger
+            <template #loader>
+              <span class="custom-loader">
+                <VIcon icon="tabler-refresh" />
+              </span>
+            </template>
+          </VBtn>
 
           <VBtn
             v-if="ability.can('create', 'user')"
@@ -237,14 +327,46 @@ const deleteUser = async () => {
 
       <VDivider />
 
+      <VCardText class="d-flex flex-wrap gap-4 align-center">
+        <AppTextField
+          v-model="search"
+          placeholder="Rechercher un nom, un email..."
+          prepend-inner-icon="tabler-search"
+          style="min-width: 220px;"
+        />
+
+        <AppSelect
+          v-model="selectedRole"
+          placeholder="Filtrer par rôle"
+          :items="roleOptions"
+          clearable
+          clear-icon="tabler-x"
+          style="min-width: 200px;"
+        />
+
+        <AppSelect
+          v-model="selectedStatus"
+          placeholder="Filtrer par statut"
+          :items="statusOptions"
+          clearable
+          clear-icon="tabler-x"
+          style="min-width: 180px;"
+        />
+      </VCardText>
+
+      <VDivider />
+
       <VDataTableServer
         v-model:page="page"
         v-model:items-per-page="itemsPerPage"
+        :items-per-page-options="itemsPerPageOptions"
         :headers="headers"
         :items="users"
         :items-length="totalUsers"
         :loading="loading"
-        @update:options="fetchUsers"
+        :row-props="rowProps"
+        class="text-no-wrap"
+        @update:options="updateOptions"
       >
         <template #item.name="{ item }">
           <div class="d-flex align-center gap-3 py-2">
@@ -328,6 +450,14 @@ const deleteUser = async () => {
             </VBtn>
           </div>
         </template>
+
+        <template #bottom>
+          <TablePagination
+            v-model:page="page"
+            :items-per-page="itemsPerPage"
+            :total-items="totalUsers"
+          />
+        </template>
       </VDataTableServer>
     </VCard>
 
@@ -346,68 +476,13 @@ const deleteUser = async () => {
         <VCardText class="pa-5">
           <VRow>
             <VCol
-              cols="12"
-              md="6"
+              v-for="field in activeUserFormFields"
+              :key="field.value_key"
+              v-bind="field.cols"
             >
-              <AppTextField
-                v-model="form.name"
-                label="Nom"
-                :error-messages="fieldErrors('name')"
-              />
-            </VCol>
-            <VCol
-              cols="12"
-              md="6"
-            >
-              <AppTextField
-                v-model="form.email"
-                label="Email"
-                type="email"
-                :error-messages="fieldErrors('email')"
-              />
-            </VCol>
-            <VCol
-              cols="12"
-              md="6"
-            >
-              <AppTextField
-                v-model="form.password"
-                label="Mot de passe"
-                type="password"
-                :placeholder="isEditing ? 'Laisser vide pour ne pas changer' : ''"
-                :error-messages="fieldErrors('password')"
-              />
-            </VCol>
-            <VCol
-              cols="12"
-              md="6"
-            >
-              <AppSelect
-                v-model="form.roles"
-                label="Rôles"
-                :items="roleOptions"
-                multiple
-                chips
-                closable-chips
-                :error-messages="fieldErrors('roles')"
-              />
-            </VCol>
-            <VCol
-              cols="12"
-              md="6"
-            >
-              <VSwitch
-                v-model="form.activated"
-                label="Compte activé"
-              />
-            </VCol>
-            <VCol
-              cols="12"
-              md="6"
-            >
-              <VSwitch
-                v-model="form.password_change_required"
-                label="Changement de mot de passe requis"
+              <FieldRenderer
+                v-model="form[field.value_key]"
+                :field="field"
               />
             </VCol>
           </VRow>
@@ -477,3 +552,28 @@ const deleteUser = async () => {
     </VSnackbar>
   </div>
 </template>
+
+<style lang="scss" scoped>
+.custom-loader {
+  display: flex;
+  animation: loader 1s infinite;
+}
+
+@keyframes loader {
+  from {
+    transform: rotate(0);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+// Animation de disparition d'une ligne du tableau lors de sa suppression
+:deep(.row-removing) {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  transform: scale(0.97);
+}
+</style>

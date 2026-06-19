@@ -361,6 +361,8 @@
     "watchTriggerable": true,
     "watchWithFilter": true,
     "whenever": true,
-    "useExpiration": true
+    "useExpiration": true,
+    "matchesSearch": true,
+    "useClientTable": true
   }
 }

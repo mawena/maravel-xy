@@ -2073,16 +2073,16 @@
         },
         {
             "name": "mawena/maravel",
-            "version": "4.0.0",
+            "version": "4.0.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/mawena/maravel.git",
-                "reference": "2e7cf25d2d2ff702793a18bab295bf9a3235f076"
+                "reference": "bdd25f49608e049c5dda28ca45abfa9eb22af0fe"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/mawena/maravel/zipball/2e7cf25d2d2ff702793a18bab295bf9a3235f076",
-                "reference": "2e7cf25d2d2ff702793a18bab295bf9a3235f076",
+                "url": "https://api.github.com/repos/mawena/maravel/zipball/bdd25f49608e049c5dda28ca45abfa9eb22af0fe",
+                "reference": "bdd25f49608e049c5dda28ca45abfa9eb22af0fe",
                 "shasum": ""
             },
             "require": {
@@ -2133,7 +2133,7 @@
                 "issues": "https://github.com/mawena/maravel/issues",
                 "source": "https://github.com/mawena/maravel"
             },
-            "time": "2026-06-14T10:15:03+00:00"
+            "time": "2026-06-19T10:37:32+00:00"
         },
         {
             "name": "monolog/monolog",

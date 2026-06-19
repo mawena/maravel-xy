@@ -15,14 +15,41 @@ const headers = [
   { title: 'Actions', key: 'actions', sortable: false, align: 'end' },
 ]
 
-const roles = ref([])
-const totalRoles = ref(0)
-const loading = ref(false)
-const page = ref(1)
-const itemsPerPage = ref(10)
-const search = ref('')
+const itemsPerPageOptions = [
+  { value: 10, title: '10' },
+  { value: 25, title: '25' },
+  { value: 50, title: '50' },
+  { value: -1, title: 'Tout' },
+]
 
+const typeOptions = [
+  { title: 'Super administrateur', value: true },
+  { title: 'Standard', value: false },
+]
+
+const loading = ref(false)
+const allRoles = ref([])
 const permissionOptions = ref([])
+
+// ----- Filtres (frontend) -----
+const search = ref('')
+const selectedType = ref(null)
+
+const filteredRoles = computed(() => allRoles.value.filter(role => {
+  const matchesSearchQuery = matchesSearch(role, ['name', 'label', 'description'], search.value)
+  const matchesType = selectedType.value === null || !!role.is_super_admin === selectedType.value
+
+  return matchesSearchQuery && matchesType
+}))
+
+// ----- Tri & pagination (frontend) -----
+const {
+  page,
+  itemsPerPage,
+  updateOptions,
+  paginatedItems: roles,
+  totalItems: totalRoles,
+} = useClientTable(filteredRoles)
 
 const fetchRoles = async () => {
   loading.value = true
@@ -30,14 +57,11 @@ const fetchRoles = async () => {
     const res = await $api('/roles', {
       query: {
         with_permissions: true,
-        per_page: itemsPerPage.value,
-        page: page.value,
-        search: search.value || undefined,
+        paginate: false,
       },
     })
 
-    roles.value = res.data
-    totalRoles.value = res.total
+    allRoles.value = res.data
   }
   catch (err) {
     showSnackbar(err?.data?.errors?.auth || 'Erreur lors du chargement des rôles', 'error')
@@ -61,12 +85,8 @@ const fetchPermissions = async () => {
   }
 }
 
-watch(search, () => {
-  page.value = 1
-  fetchRoles()
-})
-
 onMounted(() => {
+  fetchRoles()
   fetchPermissions()
 })
 
@@ -121,6 +141,47 @@ const fieldErrors = field => {
   return value ? String(value).split('<br>') : []
 }
 
+// ----- Champs du formulaire (pilotés par FieldRenderer) -----
+const roleFormFields = computed(() => [
+  {
+    value_key: 'name',
+    type: 'text',
+    label: 'Nom (identifiant)',
+    required: true,
+    cols: { cols: 12, md: 6 },
+  },
+  {
+    value_key: 'label',
+    type: 'text',
+    label: 'Libellé',
+    cols: { cols: 12, md: 6 },
+  },
+  {
+    value_key: 'description',
+    type: 'text',
+    label: 'Description',
+    cols: { cols: 12 },
+  },
+  {
+    value_key: 'is_super_admin',
+    type: 'boolean',
+    label: 'Super administrateur (tous les droits)',
+    cols: { cols: 12 },
+  },
+  {
+    value_key: 'permissions',
+    type: 'lov',
+    label: 'Permissions',
+    data: { list: { items: permissionOptions.value, multiple: true, chips: true } },
+    cols: { cols: 12 },
+    show: () => !form.value.is_super_admin,
+  },
+])
+
+const activeRoleFormFields = computed(() => roleFormFields.value
+  .filter(field => !field.show || field.show())
+  .map(field => ({ ...field, errors: fieldErrors(field.value_key) })))
+
 const submitForm = async () => {
   saving.value = true
   errors.value = {}
@@ -172,6 +233,11 @@ const isDeleteDialogVisible = ref(false)
 const roleToDelete = ref(null)
 const deleting = ref(false)
 
+// Ids des lignes en cours de suppression, pour jouer l'animation de disparition avant de recharger la liste
+const deletingIds = reactive(new Set())
+const rowProps = ({ item }) => ({ class: deletingIds.has(item.id) ? 'row-removing' : undefined })
+const ROW_REMOVE_ANIMATION_DURATION = 300
+
 const confirmDelete = role => {
   roleToDelete.value = role
   isDeleteDialogVisible.value = true
@@ -181,12 +247,18 @@ const deleteRole = async () => {
   if (!roleToDelete.value)
     return
 
+  const id = roleToDelete.value.id
+
   deleting.value = true
   try {
-    await $api(`/roles/${roleToDelete.value.id}`, { method: 'DELETE' })
+    await $api(`/roles/${id}`, { method: 'DELETE' })
     showSnackbar('Rôle supprimé avec succès')
     isDeleteDialogVisible.value = false
+
+    deletingIds.add(id)
+    await new Promise(resolve => setTimeout(resolve, ROW_REMOVE_ANIMATION_DURATION))
     await fetchRoles()
+    deletingIds.delete(id)
   }
   catch (err) {
     showSnackbar(err?.data?.errors?.auth || err?.data?.errors?.id || 'Une erreur est survenue', 'error')
@@ -210,13 +282,22 @@ const deleteRole = async () => {
           </p>
         </div>
 
-        <div class="d-flex gap-4 align-center">
-          <AppTextField
-            v-model="search"
-            placeholder="Rechercher..."
-            prepend-inner-icon="tabler-search"
-            style="min-width: 220px;"
-          />
+        <div class="d-flex flex-wrap gap-2">
+          <VBtn
+            variant="tonal"
+            color="secondary"
+            prepend-icon="tabler-refresh"
+            :loading="loading"
+            :disabled="loading"
+            @click="fetchRoles"
+          >
+            Recharger
+            <template #loader>
+              <span class="custom-loader">
+                <VIcon icon="tabler-refresh" />
+              </span>
+            </template>
+          </VBtn>
 
           <VBtn
             v-if="ability.can('create', 'role')"
@@ -230,14 +311,37 @@ const deleteRole = async () => {
 
       <VDivider />
 
+      <VCardText class="d-flex flex-wrap gap-4 align-center">
+        <AppTextField
+          v-model="search"
+          placeholder="Rechercher un rôle..."
+          prepend-inner-icon="tabler-search"
+          style="min-width: 220px;"
+        />
+
+        <AppSelect
+          v-model="selectedType"
+          placeholder="Filtrer par type"
+          :items="typeOptions"
+          clearable
+          clear-icon="tabler-x"
+          style="min-width: 200px;"
+        />
+      </VCardText>
+
+      <VDivider />
+
       <VDataTableServer
         v-model:page="page"
         v-model:items-per-page="itemsPerPage"
+        :items-per-page-options="itemsPerPageOptions"
         :headers="headers"
         :items="roles"
         :items-length="totalRoles"
         :loading="loading"
-        @update:options="fetchRoles"
+        :row-props="rowProps"
+        class="text-no-wrap"
+        @update:options="updateOptions"
       >
         <template #item.name="{ item }">
           <div class="d-flex align-center gap-2 py-2">
@@ -310,6 +414,14 @@ const deleteRole = async () => {
             </VBtn>
           </div>
         </template>
+
+        <template #bottom>
+          <TablePagination
+            v-model:page="page"
+            :items-per-page="itemsPerPage"
+            :total-items="totalRoles"
+          />
+        </template>
       </VDataTableServer>
     </VCard>
 
@@ -328,50 +440,13 @@ const deleteRole = async () => {
         <VCardText class="pa-5">
           <VRow>
             <VCol
-              cols="12"
-              md="6"
+              v-for="field in activeRoleFormFields"
+              :key="field.value_key"
+              v-bind="field.cols"
             >
-              <AppTextField
-                v-model="form.name"
-                label="Nom (identifiant)"
-                :error-messages="fieldErrors('name')"
-              />
-            </VCol>
-            <VCol
-              cols="12"
-              md="6"
-            >
-              <AppTextField
-                v-model="form.label"
-                label="Libellé"
-                :error-messages="fieldErrors('label')"
-              />
-            </VCol>
-            <VCol cols="12">
-              <AppTextField
-                v-model="form.description"
-                label="Description"
-                :error-messages="fieldErrors('description')"
-              />
-            </VCol>
-            <VCol cols="12">
-              <VSwitch
-                v-model="form.is_super_admin"
-                label="Super administrateur (tous les droits)"
-              />
-            </VCol>
-            <VCol
-              v-if="!form.is_super_admin"
-              cols="12"
-            >
-              <AppSelect
-                v-model="form.permissions"
-                label="Permissions"
-                :items="permissionOptions"
-                multiple
-                chips
-                closable-chips
-                :error-messages="fieldErrors('permissions')"
+              <FieldRenderer
+                v-model="form[field.value_key]"
+                :field="field"
               />
             </VCol>
           </VRow>
@@ -441,3 +516,28 @@ const deleteRole = async () => {
     </VSnackbar>
   </div>
 </template>
+
+<style lang="scss" scoped>
+.custom-loader {
+  display: flex;
+  animation: loader 1s infinite;
+}
+
+@keyframes loader {
+  from {
+    transform: rotate(0);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+// Animation de disparition d'une ligne du tableau lors de sa suppression
+:deep(.row-removing) {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  transform: scale(0.97);
+}
+</style>
