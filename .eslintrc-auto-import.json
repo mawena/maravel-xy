@@ -363,6 +363,9 @@
     "whenever": true,
     "useExpiration": true,
     "matchesSearch": true,
-    "useClientTable": true
+    "useClientTable": true,
+    "handleApiError": true,
+    "handlePasswordChangeRequired": true,
+    "handleUnauthenticated": true
   }
 }

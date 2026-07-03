@@ -5,6 +5,31 @@ Toutes les modifications notables de ce projet sont documentées dans ce fichier
 Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/) et ce projet
 respecte le [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [1.1.3] - 2026-07-03
+
+### Fixed
+
+- Redirection automatique vers la page de connexion (`/login`) lorsqu'une réponse API renvoie
+  **401 Non authentifié** : la session locale (cookies `accessToken`, `userData`, `userAbilityRules`)
+  est purgée et la page demandée est conservée dans `?to=` pour y revenir après reconnexion. L'ancienne
+  implémentation appelait `useRouter()` hors du contexte d'un composant, ce qui empêchait toute
+  redirection.
+- Redirection automatique vers la page de changement de mot de passe (`/account/security`) lorsqu'une
+  réponse API renvoie **403 avec `errors.password_change_required`** (`sub_code` `002` du middleware
+  `AccountStatusMiddleware`) ; le cookie `userData` est mis à jour pour refléter l'obligation de
+  changement.
+
+### Changed
+
+- La gestion des erreurs 401/403 est centralisée dans `handleApiError` (`resources/js/utils/api.js`),
+  partagée par les deux clients HTTP `$api` (ofetch) et `useApi` (VueUse `createFetch`).
+
+## [1.1.2] - 2026-07-02
+
+### Changed
+
+- Mise à jour de la librairie `mawena/maravel` vers la version `4.1.0`.
+
 ## [1.1.1] - 2026-06-19
 
 ### Added

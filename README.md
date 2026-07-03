@@ -1,6 +1,6 @@
 # Maravel XY
 
-[![Version](https://img.shields.io/badge/version-1.1.1-blue.svg)](https://github.com/mawena/maravel-xy/releases)
+[![Version](https://img.shields.io/badge/version-1.1.3-blue.svg)](https://github.com/mawena/maravel-xy/releases)
 ![PHP](https://img.shields.io/badge/php-%5E8.2-777BB4.svg)
 ![Laravel](https://img.shields.io/badge/laravel-%5E12.0-FF2D20.svg)
 ![Vue](https://img.shields.io/badge/vue-3.x-4FC08D.svg)
@@ -10,18 +10,28 @@ Un template minimaliste conçu pour faciliter le démarrage rapide de nouvelles 
 
 ## Table des matières
 
-- [Caractéristiques](#caractéristiques)
-- [Structure du Projet](#structure-du-projet)
-- [Installation](#installation)
-- [Développement](#développement)
-- [Ajouter une nouvelle fonctionnalité](#ajouter-une-nouvelle-fonctionnalité)
-- [Build pour la production](#build-pour-la-production)
-- [Tests](#tests)
-- [Publier une nouvelle version](#publier-une-nouvelle-version)
-- [Ressources](#ressources)
-- [Support](#support)
-- [Changelog](#changelog)
-- [License](#license)
+- [Maravel XY](#maravel-xy)
+  - [Table des matières](#table-des-matières)
+  - [Caractéristiques](#caractéristiques)
+  - [Structure du Projet](#structure-du-projet)
+  - [Installation](#installation)
+    - [Prérequis](#prérequis)
+    - [Setup](#setup)
+  - [Développement](#développement)
+    - [Démarrer le serveur de développement](#démarrer-le-serveur-de-développement)
+    - [Identifiants de test](#identifiants-de-test)
+  - [Ajouter une nouvelle fonctionnalité](#ajouter-une-nouvelle-fonctionnalité)
+    - [1. Backend (API)](#1-backend-api)
+    - [2. Frontend (Vue)](#2-frontend-vue)
+    - [3. Liste avec filtres + formulaire dynamique](#3-liste-avec-filtres--formulaire-dynamique)
+  - [Gestion globale des erreurs API](#gestion-globale-des-erreurs-api)
+  - [Build pour la production](#build-pour-la-production)
+  - [Tests](#tests)
+  - [Publier une nouvelle version](#publier-une-nouvelle-version)
+  - [Ressources](#ressources)
+  - [Support](#support)
+  - [Changelog](#changelog)
+  - [License](#license)
 
 ## Caractéristiques
 
@@ -175,6 +185,28 @@ nouvelle ressource :
   `Set` réactif `deletingIds`, exposé au tableau via `:row-props` (classe CSS `row-removing` définie dans
   le `<style scoped>` du composant) ; le rechargement de la liste est différé de la durée de l'animation
   (`ROW_REMOVE_ANIMATION_DURATION`) pour laisser la ligne disparaître en fondu avant de retirer la donnée.
+
+## Gestion globale des erreurs API
+
+Les deux clients HTTP du frontend — `$api` (`resources/js/utils/api.js`, basé sur ofetch) et `useApi`
+(`resources/js/composables/useApi.js`, basé sur `createFetch` de VueUse) — partagent une gestion
+centralisée des erreurs via `handleApiError(status, errors)` exportée par `resources/js/utils/api.js` :
+
+- **401 Non authentifié** : la session locale est purgée (cookies `accessToken`, `userData`,
+  `userAbilityRules`) et l'utilisateur est redirigé vers la page de connexion (`/login`). La page en
+  cours est conservée dans le paramètre `?to=` afin d'y revenir automatiquement après reconnexion.
+- **403 avec `errors.password_change_required`** (`sub_code` `002`, renvoyé par le middleware
+  `AccountStatusMiddleware` du package Maravel) : l'utilisateur est redirigé vers la page de changement
+  de mot de passe (`/account/security`), seule page — avec la déconnexion — autorisée par le backend
+  tant que le mot de passe n'a pas été changé. Le cookie `userData` est mis à jour
+  (`password_change_required: true`) pour que l'interface reflète cet état.
+
+Les redirections utilisent l'instance `router` importée depuis `@/plugins/1.router` (et non
+`useRouter()`, qui n'est pas disponible hors du contexte d'un composant).
+
+Les hooks d'erreur définis localement sur un appel (par exemple `onResponseError` pour afficher les
+erreurs de validation d'un formulaire) restent exécutés : ofetch ≥ 1.4 chaîne les hooks globaux et
+locaux au lieu de les remplacer.
 
 ## Build pour la production
 

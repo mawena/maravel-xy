@@ -54,6 +54,9 @@ declare global {
   const getCurrentInstance: typeof import('vue')['getCurrentInstance']
   const getCurrentScope: typeof import('vue')['getCurrentScope']
   const h: typeof import('vue')['h']
+  const handleApiError: typeof import('./resources/js/utils/api.js')['handleApiError']
+  const handlePasswordChangeRequired: typeof import('./resources/js/utils/api.js')['handlePasswordChangeRequired']
+  const handleUnauthenticated: typeof import('./resources/js/utils/api.js')['handleUnauthenticated']
   const hexToRgb: typeof import('./resources/js/@core/utils/colorConverter.js')['hexToRgb']
   const ignorableWatch: typeof import('@vueuse/core')['ignorableWatch']
   const inject: typeof import('vue')['inject']
@@ -417,6 +420,9 @@ declare module 'vue' {
     readonly getCurrentInstance: UnwrapRef<typeof import('vue')['getCurrentInstance']>
     readonly getCurrentScope: UnwrapRef<typeof import('vue')['getCurrentScope']>
     readonly h: UnwrapRef<typeof import('vue')['h']>
+    readonly handleApiError: UnwrapRef<typeof import('./resources/js/utils/api.js')['handleApiError']>
+    readonly handlePasswordChangeRequired: UnwrapRef<typeof import('./resources/js/utils/api.js')['handlePasswordChangeRequired']>
+    readonly handleUnauthenticated: UnwrapRef<typeof import('./resources/js/utils/api.js')['handleUnauthenticated']>
     readonly hexToRgb: UnwrapRef<typeof import('./resources/js/@core/utils/colorConverter.js')['hexToRgb']>
     readonly ignorableWatch: UnwrapRef<typeof import('@vueuse/core')['ignorableWatch']>
     readonly inject: UnwrapRef<typeof import('vue')['inject']>

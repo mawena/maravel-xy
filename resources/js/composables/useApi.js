@@ -1,12 +1,6 @@
 import { createFetch } from '@vueuse/core'
 import { destr } from 'destr'
-
-const handleUnauthenticated = () => {
-  useCookie('accessToken').value = null
-  useCookie('userData').value = null
-  useCookie('userAbilityRules').value = null
-  useRouter().replace('/')
-}
+import { handleApiError } from '@/utils/api'
 
 export const useApi = createFetch({
   baseUrl: import.meta.env.VITE_API_BASE_URL || '/api',
@@ -49,8 +43,15 @@ export const useApi = createFetch({
       return { data: parsedData, response }
     },
     onFetchError(ctx) {
-      if (ctx.response?.status === 401)
-        handleUnauthenticated()
+      let parsedData = null
+      try {
+        parsedData = destr(ctx.data)
+      }
+      catch (error) {
+        console.error(error)
+      }
+
+      handleApiError(ctx.response?.status, parsedData?.errors)
 
       return ctx
     },
