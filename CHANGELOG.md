@@ -5,6 +5,16 @@ Toutes les modifications notables de ce projet sont documentées dans ce fichier
 Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/) et ce projet
 respecte le [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [1.1.4] - 2026-11-04
+
+### Fixed
+
+- README réécrit pour correspondre au code : emplacement réel des contrôleurs (`app/Http/Controllers/API`),
+  seul compte créé par le seeder (`admin@example.com`), URL de développement servie par Laravel, routes
+  de l'API, exemple de nouvelle ressource basé sur `APIController` / `BasePolicy` de Maravel, commandes
+  de test et de lint existantes. Suppression des références au script `pusher.sh` (retiré du dépôt), à
+  la commande `pnpm test` (inexistante) et au compte `user@example.com` (non créé).
+
 ## [1.1.3] - 2026-07-03
 
 ### Fixed
